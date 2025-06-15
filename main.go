@@ -19,7 +19,7 @@ func main() {
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
-	maxResults := int32(10)
+	maxResults := int32(5)
 	lookBack := false
 
 	dparams := departures.NewDeparturesGetForStopParams()
@@ -34,9 +34,9 @@ func main() {
 	log.Print(depaturesResponses.Code())
 
 	for _, d := range depaturesResponses.Payload.Departures {
-		localTime := time.Time(d.ScheduledDepartureUtc).Local().Format("Mon 2 3:04 PM")
+		localTime := time.Time(d.EstimatedDepartureUtc).Local().Format("Mon 2 3:04 PM")
 		routeList = append(routeList, ui.RouteRow{
-			Name:    d.DepartureNote,
+			Name:    d.DirectionID,
 			Number:  localTime,
 			RouteID: d.RouteID})
 		log.Printf("RouteID: %d", d.RouteID)

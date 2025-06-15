@@ -14,7 +14,7 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type RouteRow struct {
-	Name    string
+	Name    int32
 	Number  string
 	RouteID int32
 }
@@ -52,7 +52,7 @@ func StartNewTea(route []RouteRow) error {
 
 	var rows []table.Row
 	for _, r := range route {
-		rows = append(rows, table.Row{r.Name, r.Number, fmt.Sprintf("%d", r.RouteID)})
+		rows = append(rows, table.Row{fmt.Sprintf("%d", r.Name), r.Number, fmt.Sprintf("%d", r.RouteID)})
 	}
 
 	colums := []table.Column{
