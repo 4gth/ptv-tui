@@ -3,6 +3,8 @@ package ui
 import (
 	"fmt"
 	"log"
+	"ptv-tui/api"
+	"reflect"
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,12 +14,6 @@ import (
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
-
-type RouteRow struct {
-	Name    int32
-	Number  string
-	RouteID int32
-}
 
 type model struct {
 	table table.Model
@@ -48,21 +44,38 @@ func (m model) View() string {
 	return baseStyle.Render(m.table.View()) + "\n"
 }
 
-func StartNewTea(route []RouteRow) error {
+func columnsFromStruct(s interface{}) []table.Column {
+	t := reflect.TypeOf(s)
+
+	var cols []table.Column
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		colName := field.Tag.Get("col")
+		if colName == "" {
+			colName = field.Name
+		}
+
+		cols = append(cols, table.Column{
+			Title: colName,
+			Width: 20,
+		})
+	}
+	return cols
+}
+
+func StartNewTea(Rows []api.Responses) error {
 
 	var rows []table.Row
-	for _, r := range route {
-		rows = append(rows, table.Row{fmt.Sprintf("%d", r.Name), r.Number, fmt.Sprintf("%d", r.RouteID)})
+	for _, r := range Rows {
+		rows = append(rows, table.Row{r.Name, r.Number, fmt.Sprintf("%d", r.RouteID)})
 	}
 
-	colums := []table.Column{
-		{Title: "Name", Width: 20},
-		{Title: "Number", Width: 40},
-		{Title: "RouteID", Width: 10},
-	}
+	columns := columnsFromStruct(api.Responses{})
 
 	t := table.New(
-		table.WithColumns(colums),
+		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
 		table.WithHeight(20),

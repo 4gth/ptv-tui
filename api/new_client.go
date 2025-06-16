@@ -8,8 +8,11 @@ import (
 	"net/url"
 	"os"
 	"ptv-tui/client"
+	"ptv-tui/client/departures"
+	"ptv-tui/client/routes"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -17,6 +20,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Responses struct {
+	Name        string `col:"Name"`
+	Number      string `col:"Number"`
+	RouteID     int32  `col:"Route ID"`
+	DepTime     string `col:"Depature Time"`
+	DirectionID int32  `col:"Direction"`
+	StopID      int32  `col:"Stop"`
+}
 type PTVAuth struct {
 	DevID  string
 	APIKey string
@@ -101,4 +112,51 @@ func (a *PTVAuth) NewAuthInfoWriter() runtime.ClientAuthInfoWriter {
 
 		return nil
 	})
+}
+
+func GetRoutes(client client.Ptvclient) []Responses {
+
+	var routeList []Responses
+	params := routes.NewRoutesOneOrMoreRoutesParams()
+	params.SetRouteTypes([]int32{1})
+	routeRespones, err := client.Routes.RoutesOneOrMoreRoutes(params)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, r := range routeRespones.Payload.Routes {
+		routeList = append(routeList, Responses{
+			Name:    r.RouteName,
+			Number:  r.RouteNumber,
+			RouteID: r.RouteID})
+
+	}
+	return routeList
+
+}
+
+func GetDepatures(client client.Ptvclient) []Responses {
+
+	var departureList []Responses
+
+	maxResults := int32(5)
+	lookBack := false
+
+	dparams := departures.NewDeparturesGetForStopParams()
+	dparams.SetRouteType(int32(1))
+	dparams.SetStopID(int32(2266))
+	dparams.SetMaxResults(&maxResults)
+	dparams.SetLookBackwards(&lookBack)
+	depaturesResponses, err := client.Departures.DeparturesGetForStop(dparams)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, d := range depaturesResponses.Payload.Departures {
+		localTime := time.Time(d.EstimatedDepartureUtc).Local().Format("Mon 2 3:04 PM")
+		departureList = append(departureList, Responses{
+			DirectionID: d.DirectionID,
+			DepTime:     localTime,
+			RouteID:     d.RouteID})
+	}
+	return departureList
 }
