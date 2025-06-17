@@ -44,12 +44,13 @@ func (m model) View() string {
 	return baseStyle.Render(m.table.View()) + "\n"
 }
 
-func columnsFromStruct(s interface{}) []table.Column {
+// finds column name tags and constructs column names
+func columnsFromStruct(s any) []table.Column {
 	t := reflect.TypeOf(s)
 
 	var cols []table.Column
 
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		field := t.Field(i)
 
 		colName := field.Tag.Get("col")
@@ -65,14 +66,39 @@ func columnsFromStruct(s interface{}) []table.Column {
 	return cols
 }
 
-func StartNewTea(Rows []api.Responses) error {
-
-	var rows []table.Row
-	for _, r := range Rows {
-		rows = append(rows, table.Row{r.Name, r.Number, fmt.Sprintf("%d", r.RouteID)})
+// finds which columns have valid data to print for each row
+func RowsToTable(d any) ([]table.Row, error) {
+	val := reflect.ValueOf(d)
+	if val.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("data is not slice")
 	}
 
+	var rows []table.Row
+	for i := range val.Len() {
+		item := val.Index(i)
+		if item.Kind() == reflect.Ptr {
+			item = item.Elem()
+		}
+
+		if item.Kind() != reflect.Struct {
+			return nil, fmt.Errorf("slice is not a struct")
+		}
+
+		var row table.Row
+		for j := range item.NumField() {
+			field := item.Field(j)
+			row = append(row, fmt.Sprintf("%v", field.Interface()))
+		}
+		rows = append(rows, row)
+	}
+	log.Print(rows, d)
+	return rows, nil
+}
+
+func StartNewTea(Rows []api.Responses) error {
+
 	columns := columnsFromStruct(api.Responses{})
+	rows, _ := RowsToTable(Rows)
 
 	t := table.New(
 		table.WithColumns(columns),
