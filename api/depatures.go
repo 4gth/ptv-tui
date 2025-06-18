@@ -9,20 +9,36 @@ import (
 )
 
 // Takes a client and constructs a API call with params returns a struct
-func GetDepatures(client client.Ptvclient) []Responses {
+func GetDepatures(client client.Ptvclient, parameters []Parameters) []Responses {
 
-	maxResults := int32(5)
-	lookBack := false
+	var params departures.DeparturesGetForStopParams
 
-	dparams := departures.NewDeparturesGetForStopParams()
-	dparams.SetRouteType(int32(1))
-	dparams.SetStopID(int32(2266))
-	dparams.SetMaxResults(&maxResults)
-	dparams.SetLookBackwards(&lookBack)
-	depaturesResponses, err := client.Departures.DeparturesGetForStop(dparams)
+	for _, p := range parameters {
+		if *p.RouteID != 0 {
+			params.SetRouteType(*p.RouteID)
+		}
+		if p.StopID != 0 {
+			params.SetStopID(p.StopID)
+		}
+		if p.LookBackwards {
+			params.SetLookBackwards(&p.LookBackwards)
+		}
+		if p.MaxResults != 0 {
+			params.SetMaxResults(&p.MaxResults)
+		}
+		if p.DirectionID != nil {
+			params.SetDirectionID(p.DirectionID)
+		}
+		if p.RouteTypes != nil {
+			params.SetRouteType(p.RouteType)
+		}
+	}
+
+	depaturesResponses, err := client.Departures.DeparturesGetForStop(&params)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	log.Print(depaturesResponses.Code())
 	payload := BuildDepaturesResponses(depaturesResponses.Payload)
 

@@ -95,7 +95,7 @@ func RowsToTable(d any) ([]table.Row, error) {
 	return rows, nil
 }
 
-func StartNewTea(Rows []api.Responses) error {
+func StartNewTea(Rows *[]api.Responses) error {
 
 	columns := columnsFromStruct(api.Responses{})
 	rows, _ := RowsToTable(Rows)

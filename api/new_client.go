@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"ptv-tui/client"
-	"ptv-tui/client/routes"
 	"sort"
 	"strings"
 
@@ -26,10 +25,25 @@ type Responses struct {
 	EstDepTime  string `col:"Estimated Depature Time"`
 	DirectionID int32  `col:"Direction"`
 	StopID      int32  `col:"Stop"`
+	StopName    string `col:"Stop Name"`
+	RouteType   int32  `col:"Route Type"`
+	Routes      []any  `col:"Routes"`
 }
 type PTVAuth struct {
 	DevID  string
 	APIKey string
+}
+
+type Parameters struct {
+	RouteTypes    []int32 `json:"route_types"`
+	RouteID       *int32  `json:"route_id"`
+	RouteName     *string `json:"route_name"`
+	RouteNumber   *string `json:"route_number"`
+	RouteType     int32   `json:"route_type"`
+	DirectionID   *int32  `json:"direction_id"`
+	StopID        int32   `json:"stop_id"`
+	LookBackwards bool    `json:"look_backwards"`
+	MaxResults    int32   `json:"max_results"`
 }
 
 func NewPTVClient() client.Ptvclient {
@@ -111,25 +125,4 @@ func (a *PTVAuth) NewAuthInfoWriter() runtime.ClientAuthInfoWriter {
 
 		return nil
 	})
-}
-
-func GetRoutes(client client.Ptvclient) []Responses {
-
-	var routeList []Responses
-	params := routes.NewRoutesOneOrMoreRoutesParams()
-	params.SetRouteTypes([]int32{1})
-	routeRespones, err := client.Routes.RoutesOneOrMoreRoutes(params)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, r := range routeRespones.Payload.Routes {
-		routeList = append(routeList, Responses{
-			Name:    r.RouteName,
-			Number:  r.RouteNumber,
-			RouteID: r.RouteID})
-
-	}
-	return routeList
-
 }
