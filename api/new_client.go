@@ -1,3 +1,8 @@
+// Package api provides functions to interact with the PTV API.
+// It includes client initialization, query signing, and data retrieval functions.
+// It uses the go-openapi runtime for HTTP client operations and handles authentication via HMAC-SHA1.
+// It also includes a structure for responses and parameters for API queries.
+
 package api
 
 import (
@@ -17,6 +22,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Responses represents the structure of the responses from the PTV API.
 type Responses struct {
 	Name        string `col:"Name"`
 	Number      string `col:"Number"`
@@ -29,11 +35,14 @@ type Responses struct {
 	RouteType   int32  `col:"Route Type"`
 	Routes      []any  `col:"Routes"`
 }
+
+// PTVAuth holds the developer ID and API key for authenticating with the PTV API.
 type PTVAuth struct {
 	DevID  string
 	APIKey string
 }
 
+// Parameters defines the parameters for querying the PTV API.
 type Parameters struct {
 	RouteTypes    []int32 `json:"route_types"`
 	RouteID       *int32  `json:"route_id"`
@@ -46,21 +55,23 @@ type Parameters struct {
 	MaxResults    int32   `json:"max_results"`
 }
 
+// NewPTVClient initializes a new PTV client with authentication.
 func NewPTVClient() client.Ptvclient {
-
-	// Load keys into env
+	// Load environment variables from .env file
+	// This is useful for local development to avoid hardcoding sensitive information.
+	// In production, you might want to set these variables in your environment directly.
 	_ = godotenv.Load()
 	auth := &PTVAuth{
 
 		DevID:  os.Getenv("PTV_DEV_ID"),
 		APIKey: os.Getenv("PTV_API_KEY"),
 	}
-
-	//Creat client transport with customer authentication writer.
+	// Create a new HTTP transport with the default host, base path, and schemes
+	// The transport will use the custom authentication writer to sign requests.
 	transport := httptransport.New(client.DefaultHost, client.DefaultBasePath, client.DefaultSchemes)
 	transport.DefaultAuthentication = auth.NewAuthInfoWriter()
 
-	//Create ptv client with default host and scheme with authwriter
+	// Set the transport to use the custom authentication writer
 	ptv := client.NewHTTPClient(nil)
 	ptv.SetTransport(transport)
 
@@ -68,6 +79,11 @@ func NewPTVClient() client.Ptvclient {
 
 }
 
+// SignQuery signs the query parameters for the PTV API using HMAC-SHA1 with the provided API key and developer ID.
+// It returns the signed query parameters as url.Values.
+// The function sorts the query parameters, constructs a string to sign, and appends the signature
+// to the query parameters before returning them.
+// It is used to authenticate requests to the PTV API.
 func SignQuery(path string, query url.Values) url.Values {
 	apiKey := os.Getenv("PTV_API_KEY")
 	devID := os.Getenv("PTV_DEV_ID")

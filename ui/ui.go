@@ -11,10 +11,21 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// DepaturesForStop represents the structure of the departure information for a stop.
+type DepaturesForStop struct {
+	StopName     string `col:"Stop Name"`
+	Number       string `col:"Route Number"`
+	Direction    int32  `col:"Direction"`
+	EstDeparture string `col:"Estimated Departure"`
+	SchDeparture string `col:"Scheduled Departure"`
+}
+
+// NewStyle is a function that creates a new style for the table.
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
 
+// model is the main model for the terminal user interface.
 type model struct {
 	table table.Model
 }
@@ -23,6 +34,8 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
+// Update processes messages and updates the model.
+// It handles key messages for quitting the application and updates the table model.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
@@ -44,7 +57,11 @@ func (m model) View() string {
 	return baseStyle.Render(m.table.View()) + "\n"
 }
 
-// finds column name tags and constructs column names
+// columnsFromStruct generates table columns based on the struct fields.
+// It uses struct tags to determine the column titles.
+// If no tag is found, it uses the field name as the column title.
+// Each column has a fixed width of 15 characters.
+// TODO: Make the width dynamic based on the content.
 func columnsFromStruct(s any) []table.Column {
 	t := reflect.TypeOf(s)
 
@@ -60,19 +77,21 @@ func columnsFromStruct(s any) []table.Column {
 
 		cols = append(cols, table.Column{
 			Title: colName,
-			Width: 20,
+			Width: 15,
 		})
 	}
 	return cols
 }
 
-// finds which columns have valid data to print for each row
+// RowsToTable converts a slice of structs into a slice of table rows.
+// It iterates over each struct, extracts the field values, and formats them into rows.
+// If the input is not a slice or if the elements are not structs, it returns an error.
 func RowsToTable(d any) ([]table.Row, error) {
 	val := reflect.ValueOf(d)
 	if val.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("data is not slice")
 	}
-
+	log.Printf("making rows from: %+v", val)
 	var rows []table.Row
 	for i := range val.Len() {
 		item := val.Index(i)
@@ -91,14 +110,28 @@ func RowsToTable(d any) ([]table.Row, error) {
 		}
 		rows = append(rows, row)
 	}
-	log.Print(rows, d)
+	log.Printf("rows: %+v : %+v", rows, d)
 	return rows, nil
 }
 
-func StartNewTea(Rows *[]api.Responses) error {
+// BrewDepatureTea creates a terminal user interface to display departure information for a stop.
+func BrewDepatureTea(Rows []api.Responses) error {
 
-	columns := columnsFromStruct(api.Responses{})
-	rows, _ := RowsToTable(Rows)
+	parsedResponses := make([]DepaturesForStop, len(Rows))
+	for i, r := range Rows {
+		parsedResponses[i] = DepaturesForStop{
+			StopName:     r.StopName,
+			Number:       r.Number,
+			Direction:    r.DirectionID,
+			EstDeparture: r.EstDepTime,
+			SchDeparture: r.SchDepTime,
+		}
+	}
+	columns := columnsFromStruct(DepaturesForStop{})
+	rows, err := RowsToTable(parsedResponses)
+	if err != nil {
+		log.Printf("error converting rows: %v", err)
+	}
 
 	t := table.New(
 		table.WithColumns(columns),
@@ -121,7 +154,8 @@ func StartNewTea(Rows *[]api.Responses) error {
 
 	m := model{t}
 	p := tea.NewProgram(m)
-	_, err := p.Run()
+
+	_, err = p.Run()
 	if err != nil {
 		log.Print(err)
 		return err

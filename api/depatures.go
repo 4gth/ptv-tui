@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-// Takes a client and constructs a API call with params returns a struct
+// GetDepatures retrieves departure information for a given stop from the PTV API.
+// It accepts a client and a slice of Parameters, which can include route IDs, stop IDs, and other options.
 func GetDepatures(client client.Ptvclient, parameters []Parameters) []Responses {
 
 	var params departures.DeparturesGetForStopParams
@@ -36,17 +37,18 @@ func GetDepatures(client client.Ptvclient, parameters []Parameters) []Responses 
 
 	depaturesResponses, err := client.Departures.DeparturesGetForStop(&params)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("[%d]Failed to get Depatures: %s", depaturesResponses.Code(), err)
 	}
 
-	log.Print(depaturesResponses.Code())
 	payload := BuildDepaturesResponses(depaturesResponses.Payload)
 
-	log.Println(depaturesResponses.Payload)
 	return payload
 }
 
-// Takes the payload from the API call that returns a map[] and constructs a response struct
+// BuildDepaturesResponses converts the V3DeparturesResponse payload into a slice of Responses.
+// It formats the scheduled and estimated departure times into a human-readable format.
+// If the payload is nil, it returns an empty slice.
+// Each departure is represented by a Responses struct, which includes route ID, direction ID, stop ID, and formatted departure times.
 func BuildDepaturesResponses(payload *models.V3DeparturesResponse) []Responses {
 	if payload == nil {
 		return nil

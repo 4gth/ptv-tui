@@ -56,3 +56,14 @@ properties/routes was also originally not an array.
       }
     },
 ```
+## TODO
+
+- tabs in UI for different tables
+  - each stop in area
+    - depatures for each route through each stop
+- user input in UI
+  - select parameters
+    - routeType
+    - stop
+    - direction
+- tidy packages

@@ -8,10 +8,19 @@ import (
 )
 
 func main() {
-	//var Routes []api.Responses
+	// Initialize the PTV client and parameters for fetching departure information.
+	// This example fetches departures for a specific stop (ID: 2206) and
+	// enriches the data with route and stop details.
+	// TODO: Make the parameters configurable via UI.
+	// TODO: Add error handling for API calls and UI rendering.
+
+	log.Println("Starting PTV TUI...")
+
+	var Routes []api.Responses
 	var Depatures []api.Responses
 	var StopDetails []api.Responses
 	var Enriched []api.Responses
+
 	ptv := api.NewPTVClient()
 
 	params := []api.Parameters{
@@ -19,55 +28,25 @@ func main() {
 			RouteTypes:    []int32{1},
 			RouteType:     1,
 			RouteID:       func(i int32) *int32 { return &i }(721),
-			StopID:        2266,
+			StopID:        2206,
 			MaxResults:    int32(5),
 			LookBackwards: false,
 		},
 	}
 
 	Depatures = api.GetDepatures(ptv, params)
-	//Routes = api.GetRoutes(ptv, params)
+	Routes = api.GetRoutes(ptv, params)
 	StopDetails = api.GetStopDetails(ptv, params)
-	enrichedMap := make(map[int32]*api.Responses)
 
-	joinutil.MergeToMap(enrichedMap, Depatures, func(d api.Responses) int32 {
-		return d.RouteID
-	}, func(dst *api.Responses, src api.Responses) {
-		dst.SchDepTime = src.SchDepTime
-		dst.EstDepTime = src.EstDepTime
-		dst.DirectionID = src.DirectionID
-		dst.StopID = src.StopID
-		dst.StopName = src.StopName
-	})
+	// Enrich the depatures with stop details and routes
+	Enriched = joinutil.EnrichDepatures(Depatures, StopDetails, Routes)
 
-	//joinutil.MergeToMap(enrichedMap, Routes, func(r api.Responses) int32 {
-	//	return r.RouteID
-	//}, func(dst *api.Responses, src api.Responses) {
-	//	dst.Name = src.Name
-	//	dst.Number = src.Number
-	//	dst.RouteType = src.RouteType
-	//})
-
-	joinutil.MergeToMap(enrichedMap, StopDetails, func(s api.Responses) int32 {
-		return s.StopID
-	}, func(dst *api.Responses, src api.Responses) {
-		dst.StopName = src.StopName
-		dst.Routes = src.Routes
-		dst.StopID = src.StopID
-	})
-
-	for _, enriched := range enrichedMap {
-		Enriched = append(Enriched, *enriched)
+	for _, l := range Enriched {
+		log.Printf("Enriched: %+v", l)
 	}
 
-	//log.Println("Routes:", Routes)
-	log.Println("Depatures:", Depatures)
-	log.Println("StopDetails:", StopDetails)
-	log.Println("Enriched:", Enriched)
-	if err := ui.StartNewTea(&StopDetails); err != nil {
+	if err := ui.BrewDepatureTea(Enriched); err != nil {
 		log.Fatal(err)
 	}
-	if err := ui.StartNewTea(&Enriched); err != nil {
-		log.Fatal(err)
-	}
+
 }
