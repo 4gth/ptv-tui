@@ -12,23 +12,31 @@ import (
 // The function constructs a request to the PTV API and returns a slice of Responses containing the stop details.
 func GetStopDetails(client client.Ptvclient, parameters []Parameters) []Responses {
 	var params stops.StopsStopDetailsParams
-
+	var StopList []Responses
 	for _, p := range parameters {
 		if p.RouteType != 0 {
 			params.SetRouteType(p.RouteType)
 		}
-		if p.StopID != 0 {
-			params.SetStopID(p.StopID)
+		//if p.StopID != 0 {
+		//	params.SetStopID(p.StopID)
+		//}
+		if p.StopIDs != nil {
+			for _, stopID := range p.StopIDs {
+				params.SetStopID(stopID)
+			}
+
 		}
-	}
-	stopResponse, err := client.Stops.StopsStopDetails(&params)
-	if err != nil {
-		log.Printf("[%d]Failed to get Depatures: %s", stopResponse.Code(), err)
-	}
+		log.Printf("Fetching stop details for StopIDs: %+v using params: %+v", p.StopIDs, params.StopID)
+		stopResponse, err := client.Stops.StopsStopDetails(&params)
+		if err != nil {
+			log.Printf("[%d]Failed to get Stop Details: %s", stopResponse.Code(), err)
+			return nil // Return nil if an error occurs
+		}
+		StopList = append(StopList, BuildStopDetailsResponses(stopResponse.Payload)...)
+		log.Printf("Found %d stops", len(StopList))
 
-	stopList := BuildStopDetailsResponses(stopResponse.Payload)
-	return stopList
-
+	}
+	return StopList
 }
 
 // BuildStopDetailsResponses converts the StopsStopDetailsOK payload into a slice of Responses.
@@ -41,7 +49,7 @@ func BuildStopDetailsResponses(payload *models.V3StopResponse) []Responses {
 	}
 
 	resp := Responses{
-		StopID:   payload.Stop.StopID,
+		StopID:   []int32{payload.Stop.StopID},
 		StopName: payload.Stop.StopName,
 		Routes:   payload.Stop.Routes,
 	}

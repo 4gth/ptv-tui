@@ -9,7 +9,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/hex"
-	"log"
 	"net/url"
 	"os"
 	"ptv-tui/client"
@@ -24,16 +23,18 @@ import (
 
 // Responses represents the structure of the responses from the PTV API.
 type Responses struct {
-	Name        string `col:"Name"`
-	Number      string `col:"Number"`
-	RouteID     int32  `col:"Route ID"`
-	SchDepTime  string `col:"Scheduled Depature Time"`
-	EstDepTime  string `col:"Estimated Depature Time"`
-	DirectionID int32  `col:"Direction"`
-	StopID      int32  `col:"Stop"`
-	StopName    string `col:"Stop Name"`
-	RouteType   int32  `col:"Route Type"`
-	Routes      []any  `col:"Routes"`
+	Name          string  `col:"Name"`
+	Number        string  `col:"Number"`
+	RouteID       int32   `col:"Route ID"`
+	SchDepTime    string  `col:"Scheduled Depature Time"`
+	EstDepTime    string  `col:"Estimated Depature Time"`
+	DirectionID   int32   `col:"Direction"`
+	DirectionName string  `col:"Direction"`
+	StopID        []int32 `col:"Stop"`
+	StopName      string  `col:"Stop Name"`
+	RouteType     int32   `col:"Route Type"`
+	Routes        []any   `col:"Routes"`
+	Distance      float32 `col:"Distance"` // Distance in meters
 }
 
 // PTVAuth holds the developer ID and API key for authenticating with the PTV API.
@@ -44,15 +45,21 @@ type PTVAuth struct {
 
 // Parameters defines the parameters for querying the PTV API.
 type Parameters struct {
-	RouteTypes    []int32 `json:"route_types"`
-	RouteID       *int32  `json:"route_id"`
-	RouteName     *string `json:"route_name"`
-	RouteNumber   *string `json:"route_number"`
-	RouteType     int32   `json:"route_type"`
-	DirectionID   *int32  `json:"direction_id"`
-	StopID        int32   `json:"stop_id"`
-	LookBackwards bool    `json:"look_backwards"`
-	MaxResults    int32   `json:"max_results"`
+	RouteTypes            []int32 `json:"route_types"`
+	RouteID               *int32  `json:"route_id"`
+	RouteName             *string `json:"route_name"`
+	RouteNumber           *string `json:"route_number"`
+	RouteType             int32   `json:"route_type"`
+	DirectionID           *int32  `json:"direction_id"`
+	StopID                int32   `json:"stop_id"`
+	StopIDs               []int32 `json:"stop_ids"`
+	LookBackwards         bool    `json:"look_backwards"`
+	MaxResults            int32   `json:"max_results"`
+	SearchTerm            string  `json:"search_term"`
+	Latitude              float32 `json:"latitude"`
+	Longitude             float32 `json:"longitude"`
+	MaxDistance           float64 `json:"max_distance"`
+	MatchStopByGtfsStopID bool    `json:"match_stop_by_gtfs_stop_id"`
 }
 
 // NewPTVClient initializes a new PTV client with authentication.
@@ -113,13 +120,13 @@ func SignQuery(path string, query url.Values) url.Values {
 	}
 	sortedQuery := strings.Join(queryParts, "&")
 	stringToSign := path + "?" + sortedQuery
-	log.Printf("StringToSign: %s", stringToSign)
+
 	mac := hmac.New(sha1.New, []byte(apiKey))
 	mac.Write([]byte(stringToSign))
 	signature := hex.EncodeToString(mac.Sum(nil))
 
 	safeQuery.Set("signature", signature)
-	log.Printf("safeQuery: %s", safeQuery)
+
 	return safeQuery
 
 }
@@ -137,7 +144,6 @@ func (a *PTVAuth) NewAuthInfoWriter() runtime.ClientAuthInfoWriter {
 				req.SetQueryParam(k, v)
 			}
 		}
-		log.Printf("Calling endpoint: %s", req.GetQueryParams().Encode())
 
 		return nil
 	})

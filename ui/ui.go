@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"log"
 	"ptv-tui/api"
 	"reflect"
 
@@ -15,7 +14,8 @@ import (
 type DepaturesForStop struct {
 	StopName     string `col:"Stop Name"`
 	Number       string `col:"Route Number"`
-	Direction    int32  `col:"Direction"`
+	Name         string `col:"Route Name"`
+	Direction    string `col:"Direction"`
 	EstDeparture string `col:"Estimated Departure"`
 	SchDeparture string `col:"Scheduled Departure"`
 }
@@ -77,7 +77,7 @@ func columnsFromStruct(s any) []table.Column {
 
 		cols = append(cols, table.Column{
 			Title: colName,
-			Width: 15,
+			Width: 40,
 		})
 	}
 	return cols
@@ -91,7 +91,6 @@ func RowsToTable(d any) ([]table.Row, error) {
 	if val.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("data is not slice")
 	}
-	log.Printf("making rows from: %+v", val)
 	var rows []table.Row
 	for i := range val.Len() {
 		item := val.Index(i)
@@ -110,7 +109,6 @@ func RowsToTable(d any) ([]table.Row, error) {
 		}
 		rows = append(rows, row)
 	}
-	log.Printf("rows: %+v : %+v", rows, d)
 	return rows, nil
 }
 
@@ -122,7 +120,8 @@ func BrewDepatureTea(Rows []api.Responses) error {
 		parsedResponses[i] = DepaturesForStop{
 			StopName:     r.StopName,
 			Number:       r.Number,
-			Direction:    r.DirectionID,
+			Name:         r.Name,
+			Direction:    r.DirectionName,
 			EstDeparture: r.EstDepTime,
 			SchDeparture: r.SchDepTime,
 		}
@@ -130,7 +129,7 @@ func BrewDepatureTea(Rows []api.Responses) error {
 	columns := columnsFromStruct(DepaturesForStop{})
 	rows, err := RowsToTable(parsedResponses)
 	if err != nil {
-		log.Printf("error converting rows: %v", err)
+
 	}
 
 	t := table.New(
@@ -157,7 +156,7 @@ func BrewDepatureTea(Rows []api.Responses) error {
 
 	_, err = p.Run()
 	if err != nil {
-		log.Print(err)
+
 		return err
 	}
 	return nil

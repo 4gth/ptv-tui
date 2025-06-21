@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"ptv-tui/client"
 	"ptv-tui/client/routes"
 )
@@ -24,11 +23,9 @@ func GetRoutes(client client.Ptvclient, parameters []Parameters) []Responses {
 
 	routeRespones, err := client.Routes.RoutesOneOrMoreRoutes(&params)
 	if err != nil {
-		log.Printf("[%d]Failed to get Depatures: %s", routeRespones.Code(), err)
+
 	}
-
 	routeList := BuildRoutesResponses(routeRespones)
-
 	return routeList
 
 }

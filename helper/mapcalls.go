@@ -35,25 +35,35 @@ func EnrichDepatures(
 	routes []api.Responses,
 ) []api.Responses {
 	// Create a map for quick lookup of stop details by StopID
+	//TODO fix stop ID to be a slice of int32
 	stopMap := make(map[int32]*api.Responses)
 	for _, stop := range stopDetails {
-		stopMap[stop.StopID] = &stop
-	}
-
-	// Create a map for quick lookup of routes by RouteID
-	routeMap := make(map[int32]*api.Responses)
-	for _, route := range routes {
-		routeMap[route.RouteID] = &route
-	}
-
-	// Enrich departures with stop details and route information
-	for i, dep := range departures {
-		if stop, found := stopMap[dep.StopID]; found {
-			departures[i].StopName = stop.StopName
+		if len(stop.StopID) > 1 {
+			for _, id := range stop.StopID {
+				stopMap[stop.StopID[id]] = &stop
+			}
+		} else {
+			stopMap[stop.StopID[0]] = &stop
 		}
-		if route, found := routeMap[dep.RouteID]; found {
-			departures[i].Name = route.Name
-			departures[i].Number = route.Number
+
+		// Create a map for quick lookup of routes by RouteID
+		routeMap := make(map[int32]*api.Responses)
+		for _, route := range routes {
+			routeMap[route.RouteID] = &route
+		}
+
+		// Enrich departures with stop details and route information
+		//TODO fix stop ID to be a slice of int32
+		for i, dep := range departures {
+			for _, stopID := range dep.StopID {
+				if stop, found := stopMap[stopID]; found {
+					departures[i].StopName = stop.StopName
+				}
+			}
+			if route, found := routeMap[dep.RouteID]; found {
+				departures[i].Name = route.Name
+				departures[i].Number = route.Number
+			}
 		}
 	}
 

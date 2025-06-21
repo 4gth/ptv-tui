@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"ptv-tui/client"
 	"ptv-tui/client/departures"
 	"ptv-tui/models"
@@ -13,14 +12,10 @@ import (
 func GetDepatures(client client.Ptvclient, parameters []Parameters) []Responses {
 
 	var params departures.DeparturesGetForStopParams
+	var DepList []Responses
 
 	for _, p := range parameters {
-		if *p.RouteID != 0 {
-			params.SetRouteType(*p.RouteID)
-		}
-		if p.StopID != 0 {
-			params.SetStopID(p.StopID)
-		}
+
 		if p.LookBackwards {
 			params.SetLookBackwards(&p.LookBackwards)
 		}
@@ -31,18 +26,21 @@ func GetDepatures(client client.Ptvclient, parameters []Parameters) []Responses 
 			params.SetDirectionID(p.DirectionID)
 		}
 		if p.RouteTypes != nil {
-			params.SetRouteType(p.RouteType)
+			params.SetRouteType(p.RouteTypes[0])
 		}
+		if p.StopID != 0 {
+			params.SetStopID(p.StopID)
+		}
+
+		depaturesResponses, err := client.Departures.DeparturesGetForStop(&params)
+		if err != nil {
+
+			return nil
+		}
+		//
+		DepList = append(DepList, BuildDepaturesResponses(depaturesResponses.Payload)...)
 	}
-
-	depaturesResponses, err := client.Departures.DeparturesGetForStop(&params)
-	if err != nil {
-		log.Printf("[%d]Failed to get Depatures: %s", depaturesResponses.Code(), err)
-	}
-
-	payload := BuildDepaturesResponses(depaturesResponses.Payload)
-
-	return payload
+	return DepList
 }
 
 // BuildDepaturesResponses converts the V3DeparturesResponse payload into a slice of Responses.
@@ -54,23 +52,24 @@ func BuildDepaturesResponses(payload *models.V3DeparturesResponse) []Responses {
 		return nil
 	}
 
-	var results []Responses
-
+	var Results []Responses
 	for _, dep := range payload.Departures {
 		resp := Responses{
 			RouteID:     dep.RouteID,
 			DirectionID: dep.DirectionID,
-			StopID:      dep.StopID,
+			StopID:      []int32{dep.StopID},
 		}
+
+		//
 
 		if !time.Time(dep.ScheduledDepartureUtc).IsZero() {
-			resp.SchDepTime = time.Time(dep.ScheduledDepartureUtc).Local().Format("Mon 2 3:04 PM")
+			resp.SchDepTime = time.Time(dep.ScheduledDepartureUtc).Local().Format("Today 2 3:04 PM")
 		}
 		if !time.Time(dep.EstimatedDepartureUtc).IsZero() {
-			resp.EstDepTime = time.Time(dep.EstimatedDepartureUtc).Local().Format("Mon 2 3:04 PM")
+			resp.EstDepTime = time.Time(dep.EstimatedDepartureUtc).Local().Format("Today 2 3:04 PM")
 		}
 
-		results = append(results, resp)
+		Results = append(Results, resp)
 	}
-	return results
+	return Results
 }
